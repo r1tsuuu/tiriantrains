@@ -1,25 +1,111 @@
-# -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
-
 from django.db import models
-from django.contrib.auth.models import User
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
+
+class Station(models.Model):
+    """
+    Represents each train station owned and operated by Tirian Trains.
+    """
+    # ID: 6 decimal digits (000000-999999)
+    station_id = models.CharField(
+        max_length=6, 
+        primary_key=True, 
+        help_text="Format: 6 Digits (000000-999999)"
+    )
+    
+    station_name = models.CharField(max_length=100)
+    
+    # Station Type: Local ('L') or Inter-town ('I')
+    STATION_TYPES = [
+        ('L', 'Local'),
+        ('I', 'Inter-town'),
+    ]
+    station_type = models.CharField(max_length=1, choices=STATION_TYPES) 
+
+    def __str__(self):
+        return f"{self.station_name} ({self.get_station_type_display()})"
+
+
+class Route(models.Model):
+    """
+    Represents the path that a train takes from one train station to an adjacent train station.
+    """
+    # ID: 6 decimal digits (000000-999999)
+    route_id = models.CharField(
+        max_length=6, 
+        primary_key=True, 
+        help_text="Format: 6 Digits (000000-999999)"
+    )
+    
+    # Relationships implicitly defined by path description (Origin/Destination)
+    origin = models.ForeignKey(Station, on_delete=models.CASCADE, related_name='routes_from')
+    destination = models.ForeignKey(Station, on_delete=models.CASCADE, related_name='routes_to')
+    
+    # Route Type: Local ('L') or Inter-town ('T')
+    ROUTE_TYPES = [
+        ('L', 'Local'),
+        ('T', 'Inter-town'),
+    ]
+    route_type = models.CharField(max_length=1, choices=ROUTE_TYPES)
+
+    def __str__(self):
+        return f"Route {self.route_id}: {self.origin} to {self.destination}"
+
+
+class Trip(models.Model):
+    """
+    Represents a scheduled train trip from one train station to an adjacent train station.
+    """
+    # ID format: YYYYMMDDXXXX (Schedule Day + 4 letters)
+    trip_id = models.CharField(
+        max_length=20, 
+        primary_key=True,
+        help_text="Format: YYYYMMDDXXXX"
+    )
+    
+    # Link Trip to the specific Route (Origin/Destination)
+    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='trips', null=True)
+    
+    departure_time = models.TimeField()
+    arrival_time = models.TimeField()
+    schedule_day = models.DateField()
+    
+    # Cost in Lion Coins
+    trip_cost = models.IntegerField(default=0)
+    
+    # Trip Type: Local ('L') or Inter-town ('T')
+    TRIP_TYPES = [
+        ('L', 'Local'),
+        ('T', 'Inter-town'), 
+    ]
+    trip_type = models.CharField(max_length=1, choices=TRIP_TYPES)
+
+    def __str__(self):
+        return f"Trip {self.trip_id} ({self.get_trip_type_display()})"
 
 
 class Customer(models.Model):
     """
-    Model representing the Customer entity.
+    Stores information about the customers of Tirian Trains who purchase the tickets.
     """
-    # ID format: 4 digits (0000-9999), first 2 are birth year 
-    customer_id = models.CharField(max_length=4, primary_key=True, help_text="Format: YYXX (Year + Sequence)")
-    
-    # This is optional rn, since I took out the login requirement for now.
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    # ID format: 4 digits (0000-9999). First 2 digits match birth year.
+    customer_id = models.CharField(
+        max_length=4, 
+        primary_key=True, 
+        help_text="Format: 4 Digits (0000-9999). First 2 digits must match birth year."
+    )
     
     last_name = models.CharField(max_length=50)
     given_name = models.CharField(max_length=50)
-    middle_initial = models.CharField(max_length=2, null=True, blank=True, help_text="Letter followed by period (e.g. X.)")
+    
+    # Middle Initial: Letter followed by period (X.)
+    middle_initial = models.CharField(
+        max_length=2, 
+        null=True, 
+        blank=True, 
+        help_text="Letter followed by period (e.g. X.)"
+    )
+    
     birth_date = models.DateField()
     gender = models.CharField(max_length=20, null=True, blank=True)
 
@@ -27,53 +113,28 @@ class Customer(models.Model):
         return f"{self.last_name}, {self.given_name} ({self.customer_id})"
 
 
-class Trip(models.Model):
-    """
-    Model representing the Trip entity.
-    """
-    # ID format: YYYYMMDDXXXX 
-    trip_id = models.CharField(max_length=20, primary_key=True)
-    
-    # The PDF separates Time and Date 
-    departure_time = models.TimeField()
-    arrival_time = models.TimeField()
-    
-    # "Schedule Day" determines the specific date of the trip 
-    schedule_day = models.DateField()
-    
-    # Cost is an integer in "Lion Coins" 
-    trip_cost = models.IntegerField(default=0)
-    
-    # Trip Type: Local or Inter-town
-    TRIP_TYPES = [
-        ('L', 'Local'),
-        ('I', 'Inter-town'),
-    ]
-    trip_type = models.CharField(max_length=1, choices=TRIP_TYPES)
-
-    def __str__(self):
-        return f"Trip {self.trip_id} ({self.get_trip_type_display()}) on {self.schedule_day}"
-
-
 class Ticket(models.Model):
     """
-    Model representing the Ticket entity.
+    Represents the tickets that customers buy; can include one or more trips.
     """
-    # ID format: YYYYMMDDXXXX
-    ticket_id = models.CharField(max_length=20, primary_key=True)
+    # ID format: YYYYMMDDXXXX (Date + 4 letters)
+    ticket_id = models.CharField(
+        max_length=20, 
+        primary_key=True,
+        help_text="Format: YYYYMMDDXXXX"
+    )
     
-    # Relationship: Customer purchases Ticket
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='tickets')
     
     purchase_date = models.DateField()
-    trip_date = models.DateField() # The date the trips are scheduled
+    trip_date = models.DateField()
     
-    # Derived attribute in DB, but stored here for the prototype
-    total_cost = models.IntegerField(default=0)
+    # # Derived attribute: Sum of trip costs
+    # total_cost = models.IntegerField(default=0, editable=False)
 
     # Relationship: Ticket includes Trip (Many-to-Many)
-    # The PDF says a ticket can include "one or more trips"
     trips = models.ManyToManyField(Trip, related_name='tickets')
 
     def __str__(self):
         return f"Ticket {self.ticket_id} for {self.customer.last_name}"
+

@@ -1,179 +1,129 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Tickets {% endblock %} 
-
-<!-- Specific Page CSS goes HERE  -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block title %} Sell Ticket {% endblock %} 
 
 {% block content %}
 
-	<main class="content">
-		<div class="container-fluid p-0">
+<main class="content">
+    <div class="container-fluid p-0">
+        <h1 class="h3 mb-3">Purchase Your Ticket</h1>
 
-			<h1 class="h3 mb-3">Tickets</h1>
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Select your ticket here</h5>
+                    </div>
+                    <div class="card-body">
+                        
+                        {% if msg %}
+                            <div class="alert {% if success %}alert-success{% else %}alert-danger{% endif %} alert-dismissible" role="alert">
+                                <div class="alert-message">
+                                    {{ msg }}
+                                </div>
+                            </div>
+                        {% endif %}
 
-			<div class="row">
-				<div class="col-md-3 col-xl-2">
+                        <form method="post" action="">
+                            {% csrf_token %}
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Ticket ID</label>
+                                    {{ form.ticket_id }} 
+                                    <small class="form-text text-muted">Format: YYYYMMDDXXXX</small>
+                                    <div class="text-danger">{{ form.ticket_id.errors }}</div>
+                                </div>
 
-					<div class="card">
-						<div class="card-header">
-							<h5 class="card-title mb-0">Profile Settings</h5>
-						</div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Customer</label>
+                                    {{ form.customer }}
+                                    <div class="text-danger">{{ form.customer.errors }}</div>
+                                </div>
+                            </div>
 
-						<div class="list-group list-group-flush" role="tablist">
-							<a class="list-group-item list-group-item-action active" data-toggle="list" href="#account" role="tab">
-							Account
-							</a>
-							<a class="list-group-item list-group-item-action" data-toggle="list" href="#password" role="tab">
-							Password
-							</a>
-							<a class="list-group-item list-group-item-action" data-toggle="list" href="#" role="tab">
-							Privacy and safety
-							</a>
-							<a class="list-group-item list-group-item-action" data-toggle="list" href="#" role="tab">
-							Email notifications
-							</a>
-							<a class="list-group-item list-group-item-action" data-toggle="list" href="#" role="tab">
-							Web notifications
-							</a>
-							<a class="list-group-item list-group-item-action" data-toggle="list" href="#" role="tab">
-							Widgets
-							</a>
-							<a class="list-group-item list-group-item-action" data-toggle="list" href="#" role="tab">
-							Your data
-							</a>
-							<a class="list-group-item list-group-item-action" data-toggle="list" href="#" role="tab">
-							Delete account
-							</a>
-						</div>
-					</div>
-				</div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Purchase Date</label>
+                                    {{ form.purchase_date }}
+                                    <div class="text-danger">{{ form.purchase_date.errors }}</div>
+                                </div>
 
-				<div class="col-md-9 col-xl-10">
-					<div class="tab-content">
-						<div class="tab-pane fade show active" id="account" role="tabpanel">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Trip Date</label>
+                                    {{ form.trip_date }}
+                                    <div class="text-danger">{{ form.trip_date.errors }}</div>
+                                </div>
+                            </div>
 
-							<div class="card">
-								<div class="card-header">
+                            <div class="mb-3 mt-4">
+                                <label class="form-label h5">Select Trip</label>
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th scope="col">Select</th>
+                                                <th scope="col">Origin</th>
+                                                <th scope="col">Destination</th>
+                                                <th scope="col">Departure</th>
+                                                <th scope="col">Arrival</th>
+                                                <th scope="col">Cost</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for trip in trips %}
+                                            <tr>
+                                                <td>
+                                                    <input class="form-check-input" type="radio" name="trips" value="{{ trip.pk }}" required>
+                                                </td>
+                                                <td>
+                                                    {% if trip.route %}
+                                                        {{ trip.route.origin.station_name }}
+                                                    {% else %}
+                                                        <span class="text-muted">N/A</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if trip.route %}
+                                                        {{ trip.route.destination.station_name }}
+                                                    {% else %}
+                                                        <span class="text-muted">N/A</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ trip.departure_time|time:"H:i" }}</td>
+                                                <td>{{ trip.arrival_time|time:"H:i" }}</td>
+                                                <td><strong>{{ trip.trip_cost }}</strong> Lion Coins</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="6" class="text-center">No trips available.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="text-danger">{{ form.trips.errors }}</div>
+                            </div>
 
-									<h5 class="card-title mb-0">Public info</h5>
-								</div>
-								<div class="card-body">
-									<form>
-										<div class="row">
-											<div class="col-md-8">
-												<div class="mb-3">
-													<label class="form-label" for="inputUsername">Username</label>
-													<input type="text" class="form-control" id="inputUsername" placeholder="Username">
-												</div>
-												<div class="mb-3">
-													<label class="form-label" for="inputUsername">Biography</label>
-													<textarea rows="2" class="form-control" id="inputBio" placeholder="Tell something about yourself"></textarea>
-												</div>
-											</div>
-											<div class="col-md-4">
-												<div class="text-center">
-													<img alt="Charles Hall" src="/static/assets/img/avatars/avatar.jpg" class="rounded-circle img-responsive mt-2" width="128" height="128" />
-													<div class="mt-2">
-														<span class="btn btn-primary"><i class="fas fa-upload"></i> Upload</span>
-													</div>
-													<small>For best results, use an image at least 128px by 128px in .jpg format</small>
-												</div>
-											</div>
-										</div>
+                            <button type="submit" class="btn btn-primary btn-lg mt-3">Purchase Ticket</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
 
-										<button type="submit" class="btn btn-primary">Save changes</button>
-									</form>
-
-								</div>
-							</div>
-
-							<div class="card">
-								<div class="card-header">
-
-									<h5 class="card-title mb-0">Private info</h5>
-								</div>
-								<div class="card-body">
-									<form>
-										<div class="row">
-											<div class="mb-3 col-md-6">
-												<label class="form-label" for="inputFirstName">First name</label>
-												<input type="text" class="form-control" id="inputFirstName" placeholder="First name">
-											</div>
-											<div class="mb-3 col-md-6">
-												<label class="form-label" for="inputLastName">Last name</label>
-												<input type="text" class="form-control" id="inputLastName" placeholder="Last name">
-											</div>
-										</div>
-										<div class="mb-3">
-											<label class="form-label" for="inputEmail4">Email</label>
-											<input type="email" class="form-control" id="inputEmail4" placeholder="Email">
-										</div>
-										<div class="mb-3">
-											<label class="form-label" for="inputAddress">Address</label>
-											<input type="text" class="form-control" id="inputAddress" placeholder="1234 Main St">
-										</div>
-										<div class="mb-3">
-											<label class="form-label" for="inputAddress2">Address 2</label>
-											<input type="text" class="form-control" id="inputAddress2" placeholder="Apartment, studio, or floor">
-										</div>
-										<div class="row">
-											<div class="mb-3 col-md-6">
-												<label class="form-label" for="inputCity">City</label>
-												<input type="text" class="form-control" id="inputCity">
-											</div>
-											<div class="mb-3 col-md-4">
-												<label class="form-label" for="inputState">State</label>
-												<select id="inputState" class="form-control">
-													<option selected>Choose...</option>
-													<option>...</option>
-												</select>
-											</div>
-											<div class="mb-3 col-md-2">
-												<label class="form-label" for="inputZip">Zip</label>
-												<input type="text" class="form-control" id="inputZip">
-											</div>
-										</div>
-										<button type="submit" class="btn btn-primary">Save changes</button>
-									</form>
-
-								</div>
-							</div>
-
-						</div>
-						<div class="tab-pane fade" id="password" role="tabpanel">
-							<div class="card">
-								<div class="card-body">
-									<h5 class="card-title">Password</h5>
-
-									<form>
-										<div class="mb-3">
-											<label class="form-label" for="inputPasswordCurrent">Current password</label>
-											<input type="password" class="form-control" id="inputPasswordCurrent">
-											<small><a href="#">Forgot your password?</a></small>
-										</div>
-										<div class="mb-3">
-											<label class="form-label" for="inputPasswordNew">New password</label>
-											<input type="password" class="form-control" id="inputPasswordNew">
-										</div>
-										<div class="mb-3">
-											<label class="form-label" for="inputPasswordNew2">Verify password</label>
-											<input type="password" class="form-control" id="inputPasswordNew2">
-										</div>
-										<button type="submit" class="btn btn-primary">Save changes</button>
-									</form>
-
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-		</div>
-	</main>
+<script>
+    // Simple script to add Bootstrap class to Django form fields rendered by {{ form.field }}
+    document.addEventListener("DOMContentLoaded", function() {
+        var inputs = document.querySelectorAll('input[type="text"], input[type="date"], input[type="number"], select');
+        inputs.forEach(function(input) {
+            if (!input.classList.contains('form-control')) {
+                input.classList.add('form-control');
+            }
+        });
+    });
+</script>
 
 {% endblock content %}
-
-<!-- Specific Page JS goes HERE  -->
-{% block javascripts %}{% endblock javascripts %}

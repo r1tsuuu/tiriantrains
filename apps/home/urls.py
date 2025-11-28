@@ -12,6 +12,10 @@ urlpatterns = [
     # The home page
     path('', views.index, name='home'),
 
+    path('pages-tickets.html', views.ticket_sales, name='ticket_sales'),
+
+    path('pages-summary.html', views.ticket_summary, name='ticket_summary'),
+
     path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
 
     # Matches any html file
