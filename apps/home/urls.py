@@ -16,6 +16,8 @@ urlpatterns = [
 
     path('pages-summary.html', views.ticket_summary, name='ticket_summary'),
 
+    path('pages-profile.html', views.profile, name='profile'),
+
     path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
 
     # Matches any html file

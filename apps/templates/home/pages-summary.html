@@ -5,12 +5,29 @@
 {% block content %}
 <main class="content">
   <div class="container-fluid p-0">
-    <h1 class="h3 mb-3">View Ticket Summary</h1>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h1 class="h3">View Ticket Summary</h1>
+        </div>
+        <div class="col-md-6">
+            <form method="get" action="">
+                <div class="input-group">
+                    <input type="text" class="form-control" name="q" placeholder="Search by Ticket ID, Last Name, or Given Name" value="{{ query }}">
+                    <button class="btn btn-primary" type="submit">Search</button>
+                    {% if query %}
+                        <a href="{% url 'ticket_summary' %}" class="btn btn-secondary">Clear</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="row">
       <div class="col-12">
         <div class="card">
           <div class="card-header">
-            <h5 class="card-title mb-0">Sales Record</h5>
+            <h5 class="card-title mb-0">Ticket Record</h5>
           </div>
           <div class="card-body">
             <div class="table-responsive">
@@ -24,7 +41,7 @@
                     <th>Schedule Date</th>
                     <th>Departure</th>
                     <th>Arrival</th>
-                  </tr>
+                    <th>Cost</th> </tr>
                 </thead>
                 <tbody>
                   {% for ticket in tickets %}
@@ -54,19 +71,21 @@
                       <td>{{ trip.departure_time|time:"H:i" }}</td>
                       <td>{{ trip.arrival_time|time:"H:i" }}</td>
                       
+                      <td>{{ trip.trip_cost }} Lion Coins</td>
+                      
                     </tr>
                     {% empty %}
                     <tr>
                       <td>{{ ticket.customer.last_name }}, {{ ticket.customer.given_name }}</td>
                       <td>{{ ticket.ticket_id }}</td>
-                      <td colspan="4" class="text-muted">No trips associated with this ticket.</td>
-                      <td>{{ ticket.total_cost }}</td>
+                      <td colspan="5" class="text-muted">No trips associated with this ticket.</td>
+                      <td>0 Lion Coins</td>
                     </tr>
                     {% endfor %}
                   
                   {% empty %}
                     <tr>
-                      <td colspan="7" class="text-center">No tickets sold yet.</td>
+                      <td colspan="8" class="text-center">No tickets found matching your search.</td>
                     </tr>
                   {% endfor %}
                 </tbody>

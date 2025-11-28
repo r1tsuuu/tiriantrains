@@ -118,7 +118,6 @@ class Ticket(models.Model):
     Represents the tickets that customers buy; can include one or more trips.
     """
     # ID format: YYYYMMDDXXXX (Date + 4 letters)
-    # Changed editable=False so it doesn't show as an input field in forms
     ticket_id = models.CharField(
         max_length=20, 
         primary_key=True,
@@ -131,33 +130,28 @@ class Ticket(models.Model):
     purchase_date = models.DateField()
     trip_date = models.DateField()
     
+    # Not sure will ask
+    # total_cost = models.IntegerField(default=0, editable=False)
+
     # Relationship: Ticket includes Trip (Many-to-Many)
     trips = models.ManyToManyField(Trip, related_name='tickets')
 
     def save(self, *args, **kwargs):
-        # Check if the object is new (doesn't have an ID yet)
         if not self.ticket_id:
-            # 1. Get today's date formatted as YYYYMMDD
             today_str = datetime.date.today().strftime('%Y%m%d')
-            
-            # 2. Find the last ticket created TODAY
             last_ticket = Ticket.objects.filter(ticket_id__startswith=today_str).order_by('ticket_id').last()
             
             if last_ticket:
-                # 3. If a ticket exists today, slice the last 4 digits and increment
                 try:
                     last_seq = int(last_ticket.ticket_id[-4:])
                     new_seq = last_seq + 1
                 except ValueError:
                     new_seq = 1
             else:
-                # 4. If no ticket exists today, start at 1
                 new_seq = 1
             
-            # 5. Form the new ID: Date + 4 digit sequence (padded with zeros)
             self.ticket_id = f"{today_str}{new_seq:04d}"
             
-            # Optional: Ensure purchase_date matches the ID date if not set
             if not self.purchase_date:
                 self.purchase_date = datetime.date.today()
 

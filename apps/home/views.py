@@ -8,8 +8,26 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.urls import reverse
+from django.db.models import Q
+from .models import Trip, Ticket, Customer
 from .forms import TicketForm
-from .models import Trip, Ticket
+
+
+def profile(request):
+    """
+    View to display customer profile.
+    """
+    #Since there is no link between User and Customer in models.py yet,
+    # we fetch the first customer found to demonstrate the display.
+    customer = Customer.objects.first()
+    
+    context = {
+        'segment': 'pages-profile',
+        'customer': customer
+    }
+
+    html_template = loader.get_template('home/pages-profile.html')
+    return HttpResponse(html_template.render(context, request))
 
 
 def ticket_sales(request):
@@ -72,9 +90,11 @@ def ticket_sales(request):
 
 def ticket_summary(request):
     """
-    View to display a summary of all sold tickets.
+    View to display a summary of all sold tickets with search functionality.
     """
-    # Fetch tickets and prefetch related data to display Origin/Destination/Customer efficiently
+    query = request.GET.get('q', '') # Get the search term from URL (e.g., ?q=Lance)
+
+    # Base query: Fetch tickets and related data efficiently
     tickets = Ticket.objects.select_related('customer').prefetch_related(
         'trips',
         'trips__route',
@@ -82,9 +102,20 @@ def ticket_summary(request):
         'trips__route__destination'
     ).all().order_by('-purchase_date')
 
+    # Apply filter if a query exists
+    if query:
+        tickets = tickets.filter(
+            Q(ticket_id__icontains=query) | 
+            Q(customer__last_name__icontains=query) | 
+            Q(customer__given_name__icontains=query) |
+            Q(trips__route__origin__station_name__icontains=query) |
+            Q(trips__route__destination__station_name__icontains=query)
+        )
+
     context = {
         'segment': 'pages-summary',
-        'tickets': tickets
+        'tickets': tickets,
+        'query': query # Pass the query back to the template to keep it in the search box
     }
 
     html_template = loader.get_template('home/pages-summary.html')

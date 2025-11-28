@@ -46,9 +46,9 @@ class TicketAdmin(admin.ModelAdmin):
     Admin view for Ticket model.
     """
     list_display = ('ticket_id', 'customer', 
-                    'purchase_date', 'trip_date')
+                    'purchase_date', 'trip_date',)
     
-    read_only_fields = ('ticket_id',)
+    read_only_fields = ('ticket_id')
     
 
 admin.site.register(Station, StationAdmin)
