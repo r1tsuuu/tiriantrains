@@ -2,48 +2,46 @@
 
 {% block title %} Profile {% endblock %} 
 
-<!-- Specific Page CSS goes HERE  -->
-{% block stylesheets %}{% endblock stylesheets %}
-
 {% block content %}
 
 <main class="content">
-	<div class="container-fluid p-0">
-		<h1 class="h3 mb-3">Profile</h1>
-		<div class="row">
-			<div class="col-12">
-				<div class="card mb-3">
-					<div class="card-header">
-						<h5 class="card-title mb-0">Customer Information</h5>
-					</div>
-					<div class="card-body text-center">
-						<img src="/static/assets/img/avatars/avatar.jpg" 
-							class="img-fluid rounded-circle mb-2" width="128" height="128" />
-						<h5 class="card-title mb-0">
-							{{ request.user.username }}
-						</h5>
-						<div class="text-muted mb-2">
-							{{ request.user.email }}	
-						</div>
+    <div class="container-fluid p-0">
+        <h1 class="h3 mb-3">Profile</h1>
+        <div class="row">
+            <div class="col-12"> <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Customer Information</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="/static/assets/img/avatars/avatar.jpg" 
+                            class="img-fluid rounded-circle mb-2" width="128" height="128" />
 
-						<div>
-							<a class="btn btn-primary btn-sm" href="#">Change</a>
-						</div>
-						<ul class="list-unstyled mb-0">
-							<li class="mb-1">Last Name</li>
-							<li class="mb-1">Given Name</li>
-							<li class="mb-1">Middle Initial</li>
-							<li class="mb-1">Birthdate</li>
-							<li class="mb-1">Gender</li>
-						</ul>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+                        <div class="text-start border-top pt-3">
+                            <p class="mb-2">
+                                <strong>Last Name:</strong> {{ customer.last_name }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Given Name:</strong> {{ customer.given_name }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Middle Initial:</strong> {{ customer.middle_initial }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Birthdate:</strong> {{ customer.birth_date|date:"F j, Y" }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Gender:</strong> {{ customer.gender }}
+                            </p>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <a class="btn btn-primary btn-sm" href="#">Change</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </main>
 
 {% endblock content %}
-
-<!-- Specific Page JS goes HERE  -->
-{% block javascripts %}{% endblock javascripts %}
