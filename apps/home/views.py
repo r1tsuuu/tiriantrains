@@ -22,8 +22,28 @@ def ticket_sales(request):
     if request.method == "POST":
         form = TicketForm(request.POST)
         if form.is_valid():
-            form.save()
-            msg = 'Ticket successfully created.'
+            # 1. Extract cleaned data from the form
+            customer = form.cleaned_data['customer']
+            purchase_date = form.cleaned_data['purchase_date']
+            trip_date = form.cleaned_data['trip_date']
+            selected_trips = form.cleaned_data['trips'] # This is a list/QuerySet of trips
+
+            # 2. Loop through EACH selected trip
+            for trip in selected_trips:
+                # 3. Create a NEW Ticket instance for this specific trip
+                new_ticket = Ticket(
+                    customer=customer,
+                    purchase_date=purchase_date,
+                    trip_date=trip_date
+                )
+                
+                # 4. Save first to trigger the unique 'ticket_id' generation in models.py
+                new_ticket.save()
+                
+                # 5. Add the single trip to this new ticket
+                new_ticket.trips.add(trip)
+
+            msg = f'{len(selected_trips)} Ticket(s) successfully created!'
             success = True
             form = TicketForm() # Reset form
         else:
@@ -31,8 +51,7 @@ def ticket_sales(request):
     else:
         form = TicketForm()
 
-    # Fetch all trips with related route/station data for performance
-    # This allows us to access origin/destination names in the template
+    # Fetch trips for the display table
     trips = Trip.objects.select_related(
         'route', 
         'route__origin', 
@@ -42,7 +61,7 @@ def ticket_sales(request):
     context = {
         'segment': 'pages-tickets',
         'form': form,
-        'trips': trips, # Pass trips to template
+        'trips': trips,
         'msg': msg,
         'success': success
     }
@@ -71,9 +90,26 @@ def ticket_summary(request):
     html_template = loader.get_template('home/pages-summary.html')
     return HttpResponse(html_template.render(context, request))
 
+
 # @login_required(login_url="/login/")
 def index(request):
-    context = {'segment': 'index'}
+    # Fetch Local Trips ('L')
+    local_trips = Trip.objects.filter(trip_type='L').select_related(
+        'route__origin', 
+        'route__destination'
+    ).order_by('schedule_day', 'departure_time')
+
+    # Fetch Inter-town Trips ('T')
+    inter_trips = Trip.objects.filter(trip_type='T').select_related(
+        'route__origin', 
+        'route__destination'
+    ).order_by('schedule_day', 'departure_time')
+
+    context = {
+        'segment': 'index',
+        'local_trips': local_trips,
+        'inter_trips': inter_trips
+    }
 
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))

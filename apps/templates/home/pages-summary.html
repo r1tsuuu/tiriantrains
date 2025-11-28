@@ -1,13 +1,11 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Ticket Sale Summary {% endblock %}
+{% block title %} Summary {% endblock %}
 
 {% block content %}
 <main class="content">
   <div class="container-fluid p-0">
-
-    <h1 class="h3 mb-3">Ticket Summary</h1>
-
+    <h1 class="h3 mb-3">View Ticket Summary</h1>
     <div class="row">
       <div class="col-12">
         <div class="card">
@@ -23,6 +21,7 @@
                     <th>Ticket ID</th>
                     <th>Origin</th>
                     <th>Destination</th>
+                    <th>Schedule Date</th>
                     <th>Departure</th>
                     <th>Arrival</th>
                   </tr>
@@ -51,6 +50,7 @@
                         {% endif %}
                       </td>
                       
+                      <td>{{ trip.schedule_day|date:"Y-m-d" }}</td>
                       <td>{{ trip.departure_time|time:"H:i" }}</td>
                       <td>{{ trip.arrival_time|time:"H:i" }}</td>
                       

@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Sell Ticket {% endblock %} 
+{% block title %} Purchase {% endblock %} 
 
 {% block content %}
 
@@ -29,26 +29,19 @@
                             
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Ticket ID</label>
-                                    {{ form.ticket_id }} 
-                                    <small class="form-text text-muted">Format: YYYYMMDDXXXX</small>
-                                    <div class="text-danger">{{ form.ticket_id.errors }}</div>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
                                     <label class="form-label">Customer</label>
                                     {{ form.customer }}
                                     <div class="text-danger">{{ form.customer.errors }}</div>
                                 </div>
-                            </div>
 
-                            <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Purchase Date</label>
                                     {{ form.purchase_date }}
                                     <div class="text-danger">{{ form.purchase_date.errors }}</div>
                                 </div>
+                            </div>
 
+                            <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Trip Date</label>
                                     {{ form.trip_date }}
@@ -57,7 +50,7 @@
                             </div>
 
                             <div class="mb-3 mt-4">
-                                <label class="form-label h5">Select Trip</label>
+                                <label class="form-label h5">Select Trips</label>
                                 <div class="table-responsive">
                                     <table class="table table-hover table-striped">
                                         <thead class="table-light">
@@ -74,7 +67,7 @@
                                             {% for trip in trips %}
                                             <tr>
                                                 <td>
-                                                    <input class="form-check-input" type="radio" name="trips" value="{{ trip.pk }}" required>
+                                                    <input class="form-check-input" type="checkbox" name="trips" value="{{ trip.pk }}">
                                                 </td>
                                                 <td>
                                                     {% if trip.route %}

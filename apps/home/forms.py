@@ -6,9 +6,8 @@ from .models import Ticket
 class TicketForm(forms.ModelForm):
     class Meta:
         model = Ticket
-        fields = ['ticket_id', 'customer', 
-                  'purchase_date', 'trip_date',
-                  'trips']
+        fields = ['customer', 'purchase_date',
+                  'trip_date','trips']
 
         widgets = {
             'purchase_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),

@@ -10,14 +10,16 @@ class StationAdmin(admin.ModelAdmin):
     """
     Admin view for Station model.
     """
-    list_display = ('station_id', 'station_name', 'station_type')
+    list_display = ('station_id', 'station_name', 
+                    'station_type')
 
 
 class RouteAdmin(admin.ModelAdmin):
     """
     Admin view for Route model.
     """
-    list_display = ('route_id', 'origin', 'destination', 'route_type')
+    list_display = ('route_id', 'origin',
+                    'destination', 'route_type')
 
 
 class CustomerAdmin(admin.ModelAdmin):
@@ -25,8 +27,8 @@ class CustomerAdmin(admin.ModelAdmin):
     Admin view for Customer model.
     """
     list_display = ('customer_id', 'last_name',
-                    'given_name', 'birth_date',
-                    'gender')
+                    'given_name', 'middle_initial',
+                    'birth_date', 'gender')
     
 
 class TripAdmin(admin.ModelAdmin):
@@ -45,6 +47,8 @@ class TicketAdmin(admin.ModelAdmin):
     """
     list_display = ('ticket_id', 'customer', 
                     'purchase_date', 'trip_date')
+    
+    read_only_fields = ('ticket_id',)
     
 
 admin.site.register(Station, StationAdmin)
