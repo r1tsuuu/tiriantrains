@@ -7,7 +7,6 @@
 <main class="content">
     <div class="container-fluid p-0">
         <h1 class="h3 mb-3">Purchase Your Ticket</h1>
-
         <div class="row">
             <div class="col-12">
                 <div class="card">
@@ -26,21 +25,6 @@
 
                         <form method="post" action="">
                             {% csrf_token %}
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Customer</label>
-                                    {{ form.customer }}
-                                    <div class="text-danger">{{ form.customer.errors }}</div>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Purchase Date</label>
-                                    {{ form.purchase_date }}
-                                    <div class="text-danger">{{ form.purchase_date.errors }}</div>
-                                </div>
-                            </div>
-
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Trip Date</label>
@@ -56,10 +40,13 @@
                                         <thead class="table-light">
                                             <tr>
                                                 <th scope="col">Select</th>
+                                                <th scope="col">Train ID</th>
+                                                <th scope="col">Trip ID</th>
                                                 <th scope="col">Origin</th>
                                                 <th scope="col">Destination</th>
                                                 <th scope="col">Departure</th>
                                                 <th scope="col">Arrival</th>
+                                                <th scope="col">Duration</th> 
                                                 <th scope="col">Cost</th>
                                             </tr>
                                         </thead>
@@ -69,27 +56,20 @@
                                                 <td>
                                                     <input class="form-check-input" type="checkbox" name="trips" value="{{ trip.pk }}">
                                                 </td>
-                                                <td>
-                                                    {% if trip.route %}
-                                                        {{ trip.route.origin.station_name }}
-                                                    {% else %}
-                                                        <span class="text-muted">N/A</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    {% if trip.route %}
-                                                        {{ trip.route.destination.station_name }}
-                                                    {% else %}
-                                                        <span class="text-muted">N/A</span>
-                                                    {% endif %}
-                                                </td>
+                                                <td>{{ trip.train.train_number|default:"-" }}</td>
+                                                <td>{{ trip.trip_id }}</td>
+                                                
+                                                <td>{{ trip.origin_name }}</td>
+                                                <td>{{ trip.destination_name }}</td>
+                                                
                                                 <td>{{ trip.departure_time|time:"H:i" }}</td>
                                                 <td>{{ trip.arrival_time|time:"H:i" }}</td>
+                                                <td>{{ trip.formatted_duration }}</td>
                                                 <td><strong>{{ trip.trip_cost }}</strong> Lion Coins</td>
                                             </tr>
                                             {% empty %}
                                             <tr>
-                                                <td colspan="6" class="text-center">No trips available.</td>
+                                                <td colspan="9" class="text-center">No trips available.</td>
                                             </tr>
                                             {% endfor %}
                                         </tbody>
@@ -108,7 +88,6 @@
 </main>
 
 <script>
-    // Simple script to add Bootstrap class to Django form fields rendered by {{ form.field }}
     document.addEventListener("DOMContentLoaded", function() {
         var inputs = document.querySelectorAll('input[type="text"], input[type="date"], input[type="number"], select');
         inputs.forEach(function(input) {

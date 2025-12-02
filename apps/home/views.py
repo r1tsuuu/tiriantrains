@@ -1,35 +1,90 @@
-# -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
-
-from django import template
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
 from django.template import loader
-from django.urls import reverse
 from django.db.models import Q
-from .models import Trip, Ticket, Customer
-from .forms import TicketForm
+from .forms import TicketForm, SignUpForm
+from .models import Trip, Ticket
+import datetime
 
 
+def register(request):
+    """
+    Handles Customer Registration.
+    """
+    msg = None
+    if request.method == "POST":
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            try:
+                customer = form.save()
+                msg = f"Account created! Your Login ID is: {customer.customer_id}"
+                login(request, customer.user)
+                return redirect('home') 
+            except Exception as e:
+                msg = f"Error: {e}"
+        else:
+            msg = "Form is invalid"
+    else:
+        form = SignUpForm()
+
+    context = {
+        'form': form, 
+        'msg': msg
+    }
+    # Ensure this points to your specific template
+    html_template = loader.get_template('home/pages-sign-up.html')
+    return HttpResponse(html_template.render(context, request))
+
+
+def login_view(request):
+    """
+    Handles Customer Login using Customer ID.
+    """
+    form = None
+    msg = None
+    
+    if request.method == "POST":
+        # In HTML, the input name will be 'username' (which is the customer_id)
+        username = request.POST.get('username') 
+        password = request.POST.get('password')
+        
+        user = authenticate(username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+        else:
+            msg = "Invalid Customer ID or Password"
+            
+    context = {'msg': msg}
+    html_template = loader.get_template('home/pages-sign-in.html')
+    return HttpResponse(html_template.render(context, request))
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+
+@login_required(login_url="/login/")
 def profile(request):
-    """
-    View to display customer profile.
-    """
-    #Since there is no link between User and Customer in models.py yet,
-    # we fetch the first customer found to demonstrate the display.
-    customer = Customer.objects.first()
+    # Get the customer linked to the current logged-in user
+    try:
+        customer = request.user.customer_profile 
+    except:
+        customer = None 
     
     context = {
         'segment': 'pages-profile',
         'customer': customer
     }
-
     html_template = loader.get_template('home/pages-profile.html')
     return HttpResponse(html_template.render(context, request))
 
 
+@login_required(login_url="/login/")
 def ticket_sales(request):
     """
     View to handle ticket sales.
@@ -40,40 +95,48 @@ def ticket_sales(request):
     if request.method == "POST":
         form = TicketForm(request.POST)
         if form.is_valid():
-            # 1. Extract cleaned data from the form
-            customer = form.cleaned_data['customer']
-            purchase_date = form.cleaned_data['purchase_date']
+            #  Get the data
             trip_date = form.cleaned_data['trip_date']
-            selected_trips = form.cleaned_data['trips'] # This is a list/QuerySet of trips
+            selected_trips = form.cleaned_data['trips'] # This is a list of trips
 
-            # 2. Loop through EACH selected trip
-            for trip in selected_trips:
-                # 3. Create a NEW Ticket instance for this specific trip
-                new_ticket = Ticket(
-                    customer=customer,
-                    purchase_date=purchase_date,
-                    trip_date=trip_date
-                )
-                
-                # 4. Save first to trigger the unique 'ticket_id' generation in models.py
-                new_ticket.save()
-                
-                # 5. Add the single trip to this new ticket
-                new_ticket.trips.add(trip)
+            #  Get the currently logged-in Customer
+            try:
+                current_customer = request.user.customer_profile
+            except AttributeError:
+                msg = "Error: Users must have a Customer Profile to buy tickets."
+                return render(request, 'home/pages-tickets.html', {'msg': msg, 'form': form})
 
-            msg = f'{len(selected_trips)} Ticket(s) successfully created!'
+            #  Create ONE Ticket instance (OUTSIDE the loop)
+            new_ticket = Ticket(
+                customer=current_customer, 
+                purchase_date=datetime.date.today(),
+                trip_date=trip_date
+            )
+            
+            # Save first to generate the Ticket ID
+            new_ticket.save() 
+            
+            #  Add ALL selected trips to this single ticket
+            # The .set() method handles Many-to-Many relationships efficiently
+            new_ticket.trips.set(selected_trips)
+
+            new_ticket.calculate_total_cost()
+
+            msg = f'Ticket {new_ticket.ticket_id} successfully created with {len(selected_trips)} trip(s)!'
             success = True
-            form = TicketForm() # Reset form
+            form = TicketForm() 
         else:
             msg = 'Form is not valid'
     else:
         form = TicketForm()
 
-    # Fetch trips for the display table
     trips = Trip.objects.select_related(
-        'route', 
-        'route__origin', 
-        'route__destination'
+        'train',
+        'route',
+        'route__local_route_info__l_route_origin__l_station_id',
+        'route__local_route_info__l_route_desti__l_station_id',
+        'route__intertown_route_info__i_route_origin__i_station_id',
+        'route__intertown_route_info__i_route_desti__i_station_id',
     ).all().order_by('schedule_day', 'departure_time')
 
     context = {
@@ -88,52 +151,66 @@ def ticket_sales(request):
     return HttpResponse(html_template.render(context, request))
 
 
+@login_required(login_url="/login/")
 def ticket_summary(request):
     """
-    View to display a summary of all sold tickets with search functionality.
+    View to display a summary of tickets BOUGHT BY THE CURRENT USER.
     """
-    query = request.GET.get('q', '') # Get the search term from URL (e.g., ?q=Lance)
+    query = request.GET.get('q', '') 
 
-    # Base query: Fetch tickets and related data efficiently
-    tickets = Ticket.objects.select_related('customer').prefetch_related(
-        'trips',
+    # Get the current logged-in Customer
+    try:
+        current_customer = request.user.customer_profile
+    except AttributeError:
+        # Safety check: If a Superuser logs in without a Customer profile, show nothing
+        current_customer = None
+
+    # Base Query: Start by filtering for ONLY this customer's tickets
+    if current_customer:
+        tickets = Ticket.objects.filter(customer=current_customer)
+    else:
+        tickets = Ticket.objects.none() # Return empty list if no profile found
+
+    # Add Performance Optimizations
+    tickets = tickets.prefetch_related(
+        'trips__train',
         'trips__route',
-        'trips__route__origin',
-        'trips__route__destination'
-    ).all().order_by('-purchase_date')
+        'trips__route__local_route_info__l_route_origin__l_station_id',
+        'trips__route__local_route_info__l_route_desti__l_station_id',
+        'trips__route__intertown_route_info__i_route_origin__i_station_id',
+        'trips__route__intertown_route_info__i_route_desti__i_station_id',
+    ).order_by('-purchase_date')
 
-    # Apply filter if a query exists
     if query:
         tickets = tickets.filter(
             Q(ticket_id__icontains=query) | 
-            Q(customer__last_name__icontains=query) | 
-            Q(customer__given_name__icontains=query) |
-            Q(trips__route__origin__station_name__icontains=query) |
-            Q(trips__route__destination__station_name__icontains=query)
-        )
+            # Search across both Local and Inter-town station names
+            Q(trips__route__local_route_info__l_route_origin__l_station_id__station_name__icontains=query) |
+            Q(trips__route__intertown_route_info__i_route_origin__i_station_id__station_name__icontains=query)
+        ).distinct()
 
     context = {
         'segment': 'pages-summary',
         'tickets': tickets,
-        'query': query # Pass the query back to the template to keep it in the search box
+        'query': query
     }
 
     html_template = loader.get_template('home/pages-summary.html')
     return HttpResponse(html_template.render(context, request))
 
 
-# @login_required(login_url="/login/")
+@login_required(login_url="/login/")
 def index(request):
-    # Fetch Local Trips ('L')
     local_trips = Trip.objects.filter(trip_type='L').select_related(
-        'route__origin', 
-        'route__destination'
+        'train',
+        'route__local_route_info__l_route_origin__l_station_id',
+        'route__local_route_info__l_route_desti__l_station_id'
     ).order_by('schedule_day', 'departure_time')
 
-    # Fetch Inter-town Trips ('T')
-    inter_trips = Trip.objects.filter(trip_type='T').select_related(
-        'route__origin', 
-        'route__destination'
+    inter_trips = Trip.objects.filter(trip_type='I').select_related(
+        'train',
+        'route__intertown_route_info__i_route_origin__i_station_id',
+        'route__intertown_route_info__i_route_desti__i_station_id'
     ).order_by('schedule_day', 'departure_time')
 
     context = {
@@ -141,32 +218,5 @@ def index(request):
         'local_trips': local_trips,
         'inter_trips': inter_trips
     }
-
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
-
-
-# @login_required(login_url="/login/")
-def pages(request):
-    context = {}
-    # All resource paths end in .html.
-    # Pick out the html file name from the url. And load that template.
-    try:
-
-        load_template = request.path.split('/')[-1]
-
-        if load_template == 'admin':
-            return HttpResponseRedirect(reverse('admin:index'))
-        context['segment'] = load_template
-
-        html_template = loader.get_template('home/' + load_template)
-        return HttpResponse(html_template.render(context, request))
-
-    except template.TemplateDoesNotExist:
-
-        html_template = loader.get_template('home/page-404.html')
-        return HttpResponse(html_template.render(context, request))
-
-    except:
-        html_template = loader.get_template('home/page-500.html')
-        return HttpResponse(html_template.render(context, request))

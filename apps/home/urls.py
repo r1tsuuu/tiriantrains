@@ -1,10 +1,5 @@
-# -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
-
 from django.contrib.auth import views as auth_views
-from django.urls import path, re_path
+from django.urls import path
 from apps.home import views
 
 urlpatterns = [
@@ -20,7 +15,7 @@ urlpatterns = [
 
     path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
 
-    # Matches any html file
-    re_path(r'^.*\.*', views.pages, name='pages'),
+    path('register/', views.register, name='register'),
 
+    path('login/', views.login_view, name='login'),
 ]
