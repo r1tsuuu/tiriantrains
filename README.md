@@ -1,4 +1,4 @@
-# 🦁 Tirian Trains
+# Tirian Trains
 
 **Tirian Trains** is a full-stack Django application designed for managing a fictional train network within the world of Narnia. This project demonstrates backend architecture, relational database management, and advanced task automation using Celery and Redis.
 
@@ -6,7 +6,7 @@
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 * **Framework:** [Django](https://www.djangoproject.com/)
 * **Task Queue:** [Celery](https://docs.celeryq.dev/)
