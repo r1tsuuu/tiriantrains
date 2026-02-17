@@ -340,6 +340,9 @@ class Customer(models.Model):
     birth_date = models.DateField()
     gender = models.CharField(max_length=20, null=True, blank=True)
 
+    # Profile picture field
+    profile_picture = models.ImageField(upload_to='avatars/', null=True, blank=True)
+
     def save(self, *args, **kwargs):
         """
         Overrides the save method to automatically generate the customer_id.
@@ -377,7 +380,6 @@ class Customer(models.Model):
 
     def __str__(self):
         return f"{self.last_name}, {self.given_name} ({self.customer_id})"
-
 
 class Ticket(models.Model):
     """

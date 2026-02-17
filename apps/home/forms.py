@@ -2,7 +2,6 @@ from django import forms
 from .models import Ticket, Customer
 from django.contrib.auth.models import User
 
-
 class TicketForm(forms.ModelForm):
     class Meta:
         model = Ticket
@@ -10,10 +9,8 @@ class TicketForm(forms.ModelForm):
 
         widgets = {
             'trip_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            # NEW: Render trips as checkboxes so we can style them as cards in the HTML
             'trips': forms.CheckboxSelectMultiple(),
         }
-
 
 class SignUpForm(forms.Form):
     """
@@ -24,6 +21,10 @@ class SignUpForm(forms.Form):
     middle_initial = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'M.I.', 'maxlength': '2'}))
     birth_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
     gender = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Gender'}))
+    
+    # NEW: Accept an uploaded file
+    profile_picture = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'form-control'}))
+    
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}))
     
     def save(self):
@@ -37,7 +38,6 @@ class SignUpForm(forms.Form):
         
         if last_user:
             try:
-                # Extract the last 2 digits of the username and increment
                 last_seq = int(last_user.username[-2:])
                 sequence = last_seq + 1
             except ValueError:
@@ -67,6 +67,15 @@ class SignUpForm(forms.Form):
             last_name=data['last_name'],
             middle_initial=data.get('middle_initial'),
             birth_date=data['birth_date'],
-            gender=data['gender']
+            gender=data['gender'],
+            profile_picture=data.get('profile_picture') # Save the picture
         )
         return customer
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Customer
+        fields = ['profile_picture']
+        widgets = {
+            'profile_picture': forms.FileInput(attrs={'class': 'form-control form-control-sm'})
+        }

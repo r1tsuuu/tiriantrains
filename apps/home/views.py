@@ -4,7 +4,8 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.template import loader
 from django.db.models import Q
-from .forms import TicketForm, SignUpForm
+from django.contrib import messages 
+from .forms import TicketForm, SignUpForm, ProfileUpdateForm
 from .models import Trip, Ticket
 import datetime
 from .tasks import send_ticket_confirmation_email
@@ -15,27 +16,32 @@ def register(request):
     Handles Customer Registration.
     """
     msg = None
+    success = False
+    customer_id = None
+    
     if request.method == "POST":
-        form = SignUpForm(request.POST)
+        # Add request.FILES to capture uploaded images
+        form = SignUpForm(request.POST, request.FILES)
         if form.is_valid():
             try:
                 customer = form.save()
-                msg = f"Account created! Your Login ID is: {customer.customer_id}"
-                login(request, customer.user)
-                return redirect('home') 
+                success = True
+                customer_id = customer.customer_id
+                # Removing the automatic redirect allows the template to show the success message & ID
             except Exception as e:
                 msg = f"Error: {e}"
         else:
-            msg = "Form is invalid"
+            msg = "Form is invalid. Please check your inputs."
     else:
         form = SignUpForm()
 
     context = {
         'form': form, 
-        'msg': msg
+        'msg': msg,
+        'success': success,
+        'customer_id': customer_id
     }
-    # Ensure this points to your specific template
-    html_template = loader.get_template('home/pages-sign-up.html')
+    html_template = loader.get_template('accounts/register.html')
     return HttpResponse(html_template.render(context, request))
 
 
@@ -47,7 +53,6 @@ def login_view(request):
     msg = None
     
     if request.method == "POST":
-        # In HTML, the input name will be 'username' (which is the customer_id)
         username = request.POST.get('username') 
         password = request.POST.get('password')
         
@@ -60,7 +65,8 @@ def login_view(request):
             msg = "Invalid Customer ID or Password"
             
     context = {'msg': msg}
-    html_template = loader.get_template('home/pages-sign-in.html')
+    # FIXED: Pointed to the actual location of your login template
+    html_template = loader.get_template('accounts/login.html')
     return HttpResponse(html_template.render(context, request))
 
 
@@ -71,15 +77,23 @@ def logout_view(request):
 
 @login_required(login_url="/login/")
 def profile(request):
-    # Get the customer linked to the current logged-in user
     try:
         customer = request.user.customer_profile 
     except:
         customer = None 
+        
+    if request.method == "POST":
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=customer)
+        if form.is_valid() and customer:
+            form.save()
+            return redirect('profile')
+    else:
+        form = ProfileUpdateForm(instance=customer)
     
     context = {
         'segment': 'pages-profile',
-        'customer': customer
+        'customer': customer,
+        'form': form
     }
     html_template = loader.get_template('home/pages-profile.html')
     return HttpResponse(html_template.render(context, request))
@@ -87,47 +101,31 @@ def profile(request):
 
 @login_required(login_url="/login/")
 def ticket_sales(request):
-    """
-    View to handle ticket sales.
-    """
     msg = None
     success = False
 
     if request.method == "POST":
         form = TicketForm(request.POST)
         if form.is_valid():
-            # Get the data
             trip_date = form.cleaned_data['trip_date']
-            selected_trips = form.cleaned_data['trips'] # This is a list of trips
+            selected_trips = form.cleaned_data['trips']
 
-            # Get the currently logged-in Customer
             try:
                 current_customer = request.user.customer_profile
             except AttributeError:
                 msg = "Error: Users must have a Customer Profile to buy tickets."
                 return render(request, 'home/pages-tickets.html', {'msg': msg, 'form': form})
 
-            # Create ONE Ticket instance (OUTSIDE the loop)
             new_ticket = Ticket(
                 customer=current_customer, 
                 trip_date=trip_date
-                # Note: purchase_date generation is now safely handled in the custom save()
             )
             
-            # Save first to generate the Ticket ID
             new_ticket.save() 
-            
-            # Add ALL selected trips to this single ticket
-            # The .set() method handles Many-to-Many relationships efficiently
             new_ticket.trips.set(selected_trips)
-
             new_ticket.calculate_total_cost()
 
-            # --- NEW ASYNC TRIGGER ---
-            # Send confirmation email via Celery without blocking the response
-            # Pylance does not recognize .delay() on shared_tasks without stubs
             send_ticket_confirmation_email.delay(new_ticket.ticket_id) # type: ignore
-            # -------------------------
 
             msg = f'Ticket {new_ticket.ticket_id} successfully created with {len(selected_trips)} trip(s)!'
             success = True
@@ -160,25 +158,18 @@ def ticket_sales(request):
 
 @login_required(login_url="/login/")
 def ticket_summary(request):
-    """
-    View to display a summary of tickets BOUGHT BY THE CURRENT USER.
-    """
     query = request.GET.get('q', '') 
 
-    # Get the current logged-in Customer
     try:
         current_customer = request.user.customer_profile
     except AttributeError:
-        # Safety check: If a Superuser logs in without a Customer profile, show nothing
         current_customer = None
 
-    # Base Query: Start by filtering for ONLY this customer's tickets
     if current_customer:
         tickets = Ticket.objects.filter(customer=current_customer)
     else:
-        tickets = Ticket.objects.none() # Return empty list if no profile found
+        tickets = Ticket.objects.none()
 
-    # Add Performance Optimizations
     tickets = tickets.prefetch_related(
         'trips__train',
         'trips__route',
@@ -191,7 +182,6 @@ def ticket_summary(request):
     if query:
         tickets = tickets.filter(
             Q(ticket_id__icontains=query) | 
-            # Search across both Local and Inter-town station names
             Q(trips__route__local_route_info__l_route_origin__l_station_id__station_name__icontains=query) |
             Q(trips__route__intertown_route_info__i_route_origin__i_station_id__station_name__icontains=query)
         ).distinct()
