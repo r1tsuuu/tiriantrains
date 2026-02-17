@@ -7,6 +7,7 @@ from django.db.models import Q
 from .forms import TicketForm, SignUpForm
 from .models import Trip, Ticket
 import datetime
+from .tasks import send_ticket_confirmation_email
 
 
 def register(request):
@@ -95,32 +96,38 @@ def ticket_sales(request):
     if request.method == "POST":
         form = TicketForm(request.POST)
         if form.is_valid():
-            #  Get the data
+            # Get the data
             trip_date = form.cleaned_data['trip_date']
             selected_trips = form.cleaned_data['trips'] # This is a list of trips
 
-            #  Get the currently logged-in Customer
+            # Get the currently logged-in Customer
             try:
                 current_customer = request.user.customer_profile
             except AttributeError:
                 msg = "Error: Users must have a Customer Profile to buy tickets."
                 return render(request, 'home/pages-tickets.html', {'msg': msg, 'form': form})
 
-            #  Create ONE Ticket instance (OUTSIDE the loop)
+            # Create ONE Ticket instance (OUTSIDE the loop)
             new_ticket = Ticket(
                 customer=current_customer, 
-                purchase_date=datetime.date.today(),
                 trip_date=trip_date
+                # Note: purchase_date generation is now safely handled in the custom save()
             )
             
             # Save first to generate the Ticket ID
             new_ticket.save() 
             
-            #  Add ALL selected trips to this single ticket
+            # Add ALL selected trips to this single ticket
             # The .set() method handles Many-to-Many relationships efficiently
             new_ticket.trips.set(selected_trips)
 
             new_ticket.calculate_total_cost()
+
+            # --- NEW ASYNC TRIGGER ---
+            # Send confirmation email via Celery without blocking the response
+            # Pylance does not recognize .delay() on shared_tasks without stubs
+            send_ticket_confirmation_email.delay(new_ticket.ticket_id) # type: ignore
+            # -------------------------
 
             msg = f'Ticket {new_ticket.ticket_id} successfully created with {len(selected_trips)} trip(s)!'
             success = True

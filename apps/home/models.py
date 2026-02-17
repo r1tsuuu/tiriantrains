@@ -232,6 +232,12 @@ class Trip(models.Model):
         help_text="Auto-calculated on save"
     )
 
+    # ADDED THIS FIELD FOR AUTOMATED ARCHIVING
+    is_archived = models.BooleanField(
+        default=False, 
+        help_text="True if trip has concluded"
+    )
+
     class Meta:
         ordering = ['departure_time']
 
@@ -282,7 +288,6 @@ class Trip(models.Model):
 
     def __str__(self):
         return f"Trip {self.trip_id} ({self.get_trip_type_display()})"  # type: ignore
-
 
 class L_Trip(models.Model):
     """
