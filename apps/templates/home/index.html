@@ -1,119 +1,150 @@
-{% extends "layouts/base.html" %}
-
+{% extends "layouts/base.html" %} 
 {% block title %} Schedule {% endblock %} 
-
 {% block content %}
 
 <main class="content">
-    <div class="container-fluid p-0">
-        <div class="row mb-2 mb-xl-3">
-            <div class="col-auto d-none d-sm-block">
-                <h1>View Trip Schedules</h1>
-                <p>Welcome, User!</p>
-            </div>
-        </div>
-
-        <div class="row">
-            
-            <div class="col-12 mb-4">
-                <div class="card flex-fill w-100">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Local Trip Schedules</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Train ID</th>
-                                        <th>Trip ID</th>
-                                        <th>Origin</th>
-                                        <th>Destination</th>
-                                        <th>Departure Time</th>
-                                        <th>Arrival Time</th>
-                                        <th>Duration</th> 
-                                        <th>Action</th> 
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for trip in local_trips %}
-                                    <tr>
-                                        <td>{{ trip.train.train_number|default:"-" }}</td>
-                                        <td>{{ trip.trip_id }}</td>
-                                        
-                                        <td>{{ trip.origin_name }}</td>
-                                        <td>{{ trip.destination_name }}</td>
-                                        
-                                        <td>{{ trip.departure_time|time:"H:i" }}</td>
-                                        <td>{{ trip.arrival_time|time:"H:i" }}</td>
-                                        <td>{{ trip.formatted_duration }}</td>
-
-                                        <td>
-                                            <a href="{% url 'ticket_sales' %}" class="btn btn-sm btn-primary">Purchase</a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="8" class="text-center text-muted">No local trips scheduled.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12">
-                <div class="card flex-fill w-100">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Inter-Town Trip Schedules</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Train ID</th>
-                                        <th>Trip ID</th>
-                                        <th>Origin</th>
-                                        <th>Destination</th>
-                                        <th>Departure Time</th>
-                                        <th>Arrival Time</th>
-                                        <th>Duration</th> 
-                                        <th>Action</th> 
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for trip in inter_trips %}
-                                    <tr>
-                                        <td>{{ trip.train.train_number|default:"-" }}</td>
-                                        <td>{{ trip.trip_id }}</td>
-                                        
-                                        <td>{{ trip.origin_name }}</td>
-                                        <td>{{ trip.destination_name }}</td>
-                                        
-                                        <td>{{ trip.departure_time|time:"H:i" }}</td>
-                                        <td>{{ trip.arrival_time|time:"H:i" }}</td>
-                                        <td>{{ trip.formatted_duration }}</td>
-
-                                        <td>
-                                            <a href="{% url 'ticket_sales' %}" class="btn btn-sm btn-primary">Purchase</a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="8" class="text-center text-muted">No inter-town trips scheduled.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="container-fluid p-0">
+    <div class="row mb-2 mb-xl-3">
+      <div class="col-auto d-none d-sm-block">
+        <h1 class="h3 mb-3">View Trip Schedules</h1>
+        {% if user.is_authenticated %}
+        <p class="text-muted">
+          Welcome back, <strong>{{ user.first_name }}</strong>!
+        </p>
+        {% else %}
+        <p class="text-muted">Welcome! Please sign up to book a trip.</p>
+        {% endif %}
+      </div>
     </div>
+
+    <div class="row">
+      <div class="col-12 mb-4">
+        <div class="card flex-fill w-100 shadow-sm">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Local Trip Schedules</h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Train</th>
+                    <th>Trip ID</th>
+                    <th>Origin</th>
+                    <th>Destination</th>
+                    <th class="text-center">Departure</th>
+                    <th class="text-center">Arrival</th>
+                    <th class="text-center">Duration</th>
+                    <th class="text-end pe-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for trip in local_trips %}
+                  <tr>
+                    <td>
+                      <span class="badge bg-secondary">{{ trip.train.train_number|default:"-" }}</span>
+                    </td>
+                    <td class="text-muted small">{{ trip.trip_id }}</td>
+
+                    <td class="fw-semibold">{{ trip.origin_name }}</td>
+                    <td class="fw-semibold">{{ trip.destination_name }}</td>
+
+                    <td class="text-center">
+                      {{ trip.departure_time|time:"H:i" }}
+                    </td>
+                    <td class="text-center">
+                      {{ trip.arrival_time|time:"H:i" }}
+                    </td>
+                    <td class="text-center text-muted">
+                      {{ trip.formatted_duration }}
+                    </td>
+
+                    <td class="text-end pe-4">
+                      {% if user.is_authenticated %}
+                      <a href="{% url 'ticket_sales' %}" class="btn btn-sm btn-primary">Purchase</a>
+                      {% else %}
+                      <a href="{% url 'register' %}" class="btn btn-sm btn-outline-primary">Sign Up to Buy</a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                      <em>No local trips scheduled at this time.</em>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="card flex-fill w-100 shadow-sm">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Inter-Town Trip Schedules</h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Train</th>
+                    <th>Trip ID</th>
+                    <th>Origin</th>
+                    <th>Destination</th>
+                    <th class="text-center">Departure</th>
+                    <th class="text-center">Arrival</th>
+                    <th class="text-center">Duration</th>
+                    <th class="text-end pe-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for trip in inter_trips %}
+                  <tr>
+                    <td>
+                      <span class="badge bg-info text-dark">{{ trip.train.train_number|default:"-" }}</span>
+                    </td>
+                    <td class="text-muted small">{{ trip.trip_id }}</td>
+
+                    <td class="fw-semibold">{{ trip.origin_name }}</td>
+                    <td class="fw-semibold">{{ trip.destination_name }}</td>
+
+                    <td class="text-center">
+                      {{ trip.departure_time|time:"H:i" }}
+                    </td>
+                    <td class="text-center">
+                      {{ trip.arrival_time|time:"H:i" }}
+                    </td>
+                    <td class="text-center text-muted">
+                      {{ trip.formatted_duration }}
+                    </td>
+
+                    <td class="text-end pe-4">
+                      {% if user.is_authenticated %}
+                      <a href="{% url 'ticket_sales' %}" class="btn btn-sm btn-primary">Purchase</a>
+                      {% else %}
+                      <a href="{% url 'register' %}" class="btn btn-sm btn-outline-primary">Sign Up to Buy</a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                      <em>No inter-town trips scheduled at this time.</em>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </main>
 
 {% endblock content %}

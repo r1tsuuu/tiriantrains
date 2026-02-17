@@ -1,61 +1,69 @@
-{% extends "layouts/base-fullscreen.html" %}
+{% extends "layouts/base-fullscreen.html" %} 
 
-{% block title %} Login {% endblock %} 
+{% block title %} Sign Up {% endblock %} 
 
-<!-- Specific Page CSS goes HERE  -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}{% endblock stylesheets %} 
 
 {% block content %}
+<main class="d-flex w-100">
+  <div class="container d-flex flex-column">
+    <div class="row vh-100">
+      <div class="col-sm-10 col-md-8 col-lg-6 mx-auto d-table h-100">
+        <div class="d-table-cell align-middle">
+          
+          <div class="text-center mt-4">
+            <h1 class="h2">Join Tirian Trains</h1>
+            <p class="lead">
+              {% if msg %}
+                <span class="text-danger">{{ msg | safe }}</span>
+              {% else %} 
+                Create an account to book and manage your trips. 
+              {% endif %}
+            </p>
+          </div>
 
-	<main class="d-flex w-100">
-		<div class="container d-flex flex-column">
-			<div class="row vh-100">
-				<div class="col-sm-10 col-md-8 col-lg-6 mx-auto d-table h-100">
-					<div class="d-table-cell align-middle">
+          <div class="card">
+            <div class="card-body">
+              <div class="m-sm-4">
+                <form method="post" action="{% url 'register' %}">
+                  {% csrf_token %} 
+                  
+                  {% for field in form %}
+                  <div class="mb-3">
+                    <label class="form-label">{{ field.label }}</label>
+                    {{ field }} 
+                    
+                    {% if field.errors %}
+                    <div class="text-danger small mt-1">
+                      {% for error in field.errors %} 
+                        {{ error }} 
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </div>
+                  {% endfor %}
 
-						<div class="text-center mt-4">
-							<h1 class="h2">Get started</h1>
-							<p class="lead">
-								Start creating the best possible user experience for you customers.
-							</p>
-						</div>
+                  <div class="text-center mt-3">
+                    <button type="submit" name="register" class="btn btn-lg btn-primary">
+                      Sign up
+                    </button>
+                  </div>
+                </form>
 
-						<div class="card">
-							<div class="card-body">
-								<div class="m-sm-4">
-									<form>
-										<div class="mb-3">
-											<label class="form-label">Name</label>
-											<input class="form-control form-control-lg" type="text" name="name" placeholder="Enter your name" />
-										</div>
-										<div class="mb-3">
-											<label class="form-label">Company</label>
-											<input class="form-control form-control-lg" type="text" name="company" placeholder="Enter your company name" />
-										</div>
-										<div class="mb-3">
-											<label class="form-label">Email</label>
-											<input class="form-control form-control-lg" type="email" name="email" placeholder="Enter your email" />
-										</div>
-										<div class="mb-3">
-											<label class="form-label">Password</label>
-											<input class="form-control form-control-lg" type="password" name="password" placeholder="Enter password" />
-										</div>
-										<div class="text-center mt-3">
-											<a href="index.html" class="btn btn-lg btn-primary">Sign up</a>
-											<!-- <button type="submit" class="btn btn-lg btn-primary">Sign up</button> -->
-										</div>
-									</form>
-								</div>
-							</div>
-						</div>
-
-					</div>
-				</div>
-			</div>
-		</div>
-	</main>
-
+                <div class="text-center mt-3">
+                  <p class="mb-0 text-muted">
+                    Already have an account? <a href="{% url 'login' %}">Log in</a>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
 {% endblock content %}
 
-<!-- Specific Page JS goes HERE  -->
 {% block javascripts %}{% endblock javascripts %}

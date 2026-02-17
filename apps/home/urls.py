@@ -13,7 +13,7 @@ urlpatterns = [
 
     path('pages-profile.html', views.profile, name='profile'),
 
-    path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    path('logout/', views.logout_view, name='logout'),
 
     path('register/', views.register, name='register'),
 
