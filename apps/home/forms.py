@@ -6,10 +6,12 @@ from django.contrib.auth.models import User
 class TicketForm(forms.ModelForm):
     class Meta:
         model = Ticket
-        fields = ['trip_date','trips']
+        fields = ['trip_date', 'trips']
 
         widgets = {
             'trip_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            # NEW: Render trips as checkboxes so we can style them as cards in the HTML
+            'trips': forms.CheckboxSelectMultiple(),
         }
 
 
