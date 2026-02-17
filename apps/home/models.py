@@ -1,7 +1,8 @@
 import datetime
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 
 class Station(models.Model):
     """
@@ -24,7 +25,7 @@ class Station(models.Model):
     station_type = models.CharField(max_length=1, choices=STATION_TYPES) 
 
     def __str__(self):
-        return f"{self.station_name} ({self.get_station_type_display()})"
+        return f"{self.station_name} ({self.get_station_type_display()})"  # type: ignore
 
 
 class L_Station(models.Model):
@@ -58,16 +59,16 @@ class Route(models.Model):
         help_text="Format: 6 Digits (000000-999999)"
     )
     
-    # Relationships implicitly defined by path description (Origin/Destination)
-    # origin = models.ForeignKey(Station, on_delete=models.CASCADE, related_name='routes_from')
-    # destination = models.ForeignKey(Station, on_delete=models.CASCADE, related_name='routes_to')
-    
     # Route Type: Local ('L') or Inter-town ('I')
     ROUTE_TYPES = [
         ('L', 'Local'),
         ('I', 'Inter-town'),
     ]
     route_type = models.CharField(max_length=1, choices=ROUTE_TYPES)
+
+    # Type hints for Pylance to recognize Django's dynamic reverse relations
+    local_route_info: 'L_Route'
+    intertown_route_info: 'I_Route'
 
     @property
     def origin(self):
@@ -170,7 +171,7 @@ class Train(models.Model):
     has_food_service = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Train {self.train_number} ({self.get_train_series_display()})"
+        return f"Train {self.train_number} ({self.get_train_series_display()})"  # type: ignore
     
 
 class S_Series(models.Model):
@@ -229,22 +230,25 @@ class Trip(models.Model):
         null=True, 
         blank=True,
         help_text="Auto-calculated on save"
-        )
+    )
+
+    class Meta:
+        ordering = ['departure_time']
 
     def save(self, *args, **kwargs):
-            # Calculate duration if times are present
-            if self.departure_time and self.arrival_time:
-                # Create dummy dates to allow subtraction
-                start = datetime.datetime.combine(datetime.date.today(), self.departure_time)
-                end = datetime.datetime.combine(datetime.date.today(), self.arrival_time)
+        # Calculate duration if times are present
+        if self.departure_time and self.arrival_time:
+            # Create dummy dates to allow subtraction
+            start = datetime.datetime.combine(datetime.date.today(), self.departure_time)
+            end = datetime.datetime.combine(datetime.date.today(), self.arrival_time)
+            
+            # Handle overnight trips (e.g., Departs 23:00, Arrives 01:00)
+            if end < start:
+                end += datetime.timedelta(days=1)
                 
-                # Handle overnight trips (e.g., Departs 23:00, Arrives 01:00)
-                if end < start:
-                    end += datetime.timedelta(days=1)
-                    
-                self.duration = end - start
-                
-            super(Trip, self).save(*args, **kwargs)
+            self.duration = end - start
+            
+        super(Trip, self).save(*args, **kwargs)
 
     @property
     def formatted_duration(self):
@@ -277,7 +281,7 @@ class Trip(models.Model):
         return "No Route"
 
     def __str__(self):
-        return f"Trip {self.trip_id} ({self.get_trip_type_display()})"
+        return f"Trip {self.trip_id} ({self.get_trip_type_display()})"  # type: ignore
 
 
 class L_Trip(models.Model):
@@ -308,20 +312,19 @@ class Customer(models.Model):
     """
     Stores information about the customers of Tirian Trains who purchase the tickets.
     """
-    # Create a link to the Django Auth System
-    # This allows the Customer to have a password and login capabilities
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile', null=True)
+    
     # ID format: 4 digits (0000-9999). First 2 digits match birth year.
     customer_id = models.CharField(
         max_length=4, 
-        primary_key=True, 
-        help_text="Format: 4 Digits (0000-9999). First 2 digits must match birth year."
+        primary_key=True,
+        blank=True, 
+        help_text="Format: 4 Digits (0000-9999). First 2 digits must match birth year. Auto-generated."
     )
     
     last_name = models.CharField(max_length=50)
     given_name = models.CharField(max_length=50)
     
-    # Middle Initial: Letter followed by period (X.)
     middle_initial = models.CharField(
         max_length=2, 
         null=True, 
@@ -331,6 +334,31 @@ class Customer(models.Model):
     
     birth_date = models.DateField()
     gender = models.CharField(max_length=20, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        """
+        Overrides the save method to automatically generate the customer_id.
+        The ID is a 4-digit string: YYNN (YY = last 2 digits of birth year, NN = sequence).
+        """
+        if not self.customer_id and self.birth_date:
+            year_prefix = str(self.birth_date)[:4][-2:]
+            
+            last_customer = Customer.objects.filter(
+                customer_id__startswith=year_prefix
+            ).order_by('customer_id').last()
+            
+            if last_customer:
+                try:
+                    last_seq = int(last_customer.customer_id[-2:])
+                    new_seq = last_seq + 1
+                except ValueError:
+                    new_seq = 0
+            else:
+                new_seq = 0
+                
+            self.customer_id = f"{year_prefix}{new_seq:02d}"
+            
+        super(Customer, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.last_name}, {self.given_name} ({self.customer_id})"
@@ -381,7 +409,6 @@ class Ticket(models.Model):
         """
         Sums the cost of all associated trips and updates the total_cost field.
         """
-        # Aggregate the trip_cost of all related trips
         current_total = sum(trip.trip_cost for trip in self.trips.all())
         self.total_cost = current_total
         self.save()
@@ -404,14 +431,12 @@ class Crew_In_Charge(models.Model):
     """
     Represents each crew member in charge of a specific maintenance log.
     """
-    # Employee ID: 6 decimal digits (000000-999999)
     employee_id = models.CharField(
         max_length=6,
         primary_key=True,
         help_text="Format: 6 Digits (000000-999999)"
     )
 
-    # First Initial (Letter + period)
     first_initial = models.CharField(
         max_length=2,
         help_text="Letter followed by a period (e.g. X.)"
@@ -427,7 +452,6 @@ class Maintenance_Log(models.Model):
     """
     Represents each maintenance job in the history of trains.
     """
-    # Log ID: YYYYMMDDXXXX
     log_id = models.CharField(
         max_length=20,
         primary_key=True,
@@ -437,17 +461,11 @@ class Maintenance_Log(models.Model):
 
     date = models.DateField()
 
-    # Relationships
     train = models.ForeignKey(Train, on_delete=models.CASCADE, null=True, related_name='maintenance_logs')
     crew_in_charge = models.ForeignKey(Crew_In_Charge, on_delete=models.CASCADE, null=True, related_name='logs')
 
-    # --- CHANGED HERE ---
-    # Removed: tasks = models.TextField(...) 
-    # Added: ManyToManyField using the 'through' argument to link to Log_Task
     tasks = models.ManyToManyField(Task, through='Log_Task', related_name='maintenance_logs')
-    # --------------------
 
-    # Condition: Likert Scale
     CONDITION_CHOICES = [
         ('Excellent', 'Excellent'),
         ('Very Good', 'Very Good'),
@@ -458,10 +476,8 @@ class Maintenance_Log(models.Model):
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES)
 
     def save(self, *args, **kwargs):
-        # Auto-generation logic for YYYYMMDDXXXX
         if not self.log_id:
             today_str = datetime.date.today().strftime('%Y%m%d')
-            # Check for existing logs today to increment the sequence
             last_log = Maintenance_Log.objects.filter(log_id__startswith=today_str).order_by('log_id').last()
             
             if last_log:
@@ -481,7 +497,9 @@ class Maintenance_Log(models.Model):
         super(Maintenance_Log, self).save(*args, **kwargs)
 
     def __str__(self):
-        return f"Log {self.log_id} - {self.train.train_number}"
+        # Safely check if a train is assigned before accessing train_number
+        train_num = self.train.train_number if self.train else "Unassigned"
+        return f"Log {self.log_id} - {train_num}"
 
 
 class Log_Task(models.Model):
@@ -496,3 +514,16 @@ class Log_Task(models.Model):
 
     def __str__(self):
         return f"{self.log} - {self.task}"
+
+
+# ------------------------------------------------------------------
+# DJANGO SIGNALS
+# ------------------------------------------------------------------
+@receiver(m2m_changed, sender=Ticket.trips.through)
+def update_ticket_cost(sender, instance, action, **kwargs):
+    """
+    Listens for any trips being added to or removed from a Ticket.
+    Automatically recalculates the total cost when a change is detected.
+    """
+    if action in ['post_add', 'post_remove', 'post_clear']:
+        instance.calculate_total_cost()
