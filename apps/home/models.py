@@ -25,7 +25,7 @@ class Station(models.Model):
     station_type = models.CharField(max_length=1, choices=STATION_TYPES) 
 
     def __str__(self):
-        return f"{self.station_name} ({self.get_station_type_display()})"
+        return f"{self.station_name} ({self.get_station_type_display()})"  # type: ignore
 
 
 class L_Station(models.Model):
@@ -65,6 +65,10 @@ class Route(models.Model):
         ('I', 'Inter-town'),
     ]
     route_type = models.CharField(max_length=1, choices=ROUTE_TYPES)
+
+    # Type hints for Pylance to recognize Django's dynamic reverse relations
+    local_route_info: 'L_Route'
+    intertown_route_info: 'I_Route'
 
     @property
     def origin(self):
@@ -167,7 +171,7 @@ class Train(models.Model):
     has_food_service = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Train {self.train_number} ({self.get_train_series_display()})"
+        return f"Train {self.train_number} ({self.get_train_series_display()})"  # type: ignore
     
 
 class S_Series(models.Model):
@@ -277,7 +281,7 @@ class Trip(models.Model):
         return "No Route"
 
     def __str__(self):
-        return f"Trip {self.trip_id} ({self.get_trip_type_display()})"
+        return f"Trip {self.trip_id} ({self.get_trip_type_display()})"  # type: ignore
 
 
 class L_Trip(models.Model):
@@ -493,7 +497,9 @@ class Maintenance_Log(models.Model):
         super(Maintenance_Log, self).save(*args, **kwargs)
 
     def __str__(self):
-        return f"Log {self.log_id} - {self.train.train_number}"
+        # Safely check if a train is assigned before accessing train_number
+        train_num = self.train.train_number if self.train else "Unassigned"
+        return f"Log {self.log_id} - {train_num}"
 
 
 class Log_Task(models.Model):
