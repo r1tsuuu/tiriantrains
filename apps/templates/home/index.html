@@ -1,5 +1,6 @@
-{% extends "layouts/base.html" %} {% block title %} Schedule {% endblock %} {%
-block content %}
+{% extends "layouts/base.html" %} 
+{% block title %} Schedule {% endblock %} 
+{% block content %}
 
 <main class="content">
   <div class="container-fluid p-0">
@@ -41,9 +42,7 @@ block content %}
                   {% for trip in local_trips %}
                   <tr>
                     <td>
-                      <span class="badge bg-secondary"
-                        >{{ trip.train.train_number|default:"-" }}</span
-                      >
+                      <span class="badge bg-secondary">{{ trip.train.train_number|default:"-" }}</span>
                     </td>
                     <td class="text-muted small">{{ trip.trip_id }}</td>
 
@@ -62,17 +61,9 @@ block content %}
 
                     <td class="text-end pe-4">
                       {% if user.is_authenticated %}
-                      <a
-                        href="{% url 'ticket_sales' %}"
-                        class="btn btn-sm btn-primary"
-                        >Purchase</a
-                      >
+                      <a href="{% url 'ticket_sales' %}" class="btn btn-sm btn-primary">Purchase</a>
                       {% else %}
-                      <a
-                        href="{% url 'register' %}"
-                        class="btn btn-sm btn-outline-primary"
-                        >Sign Up to Buy</a
-                      >
+                      <a href="{% url 'register' %}" class="btn btn-sm btn-outline-primary">Sign Up to Buy</a>
                       {% endif %}
                     </td>
                   </tr>
@@ -114,9 +105,7 @@ block content %}
                   {% for trip in inter_trips %}
                   <tr>
                     <td>
-                      <span class="badge bg-info text-dark"
-                        >{{ trip.train.train_number|default:"-" }}</span
-                      >
+                      <span class="badge bg-info text-dark">{{ trip.train.train_number|default:"-" }}</span>
                     </td>
                     <td class="text-muted small">{{ trip.trip_id }}</td>
 
@@ -135,17 +124,9 @@ block content %}
 
                     <td class="text-end pe-4">
                       {% if user.is_authenticated %}
-                      <a
-                        href="{% url 'ticket_sales' %}"
-                        class="btn btn-sm btn-primary"
-                        >Purchase</a
-                      >
+                      <a href="{% url 'ticket_sales' %}" class="btn btn-sm btn-primary">Purchase</a>
                       {% else %}
-                      <a
-                        href="{% url 'register' %}"
-                        class="btn btn-sm btn-outline-primary"
-                        >Sign Up to Buy</a
-                      >
+                      <a href="{% url 'register' %}" class="btn btn-sm btn-outline-primary">Sign Up to Buy</a>
                       {% endif %}
                     </td>
                   </tr>

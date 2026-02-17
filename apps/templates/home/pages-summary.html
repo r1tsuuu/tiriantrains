@@ -1,5 +1,6 @@
-{% extends "layouts/base.html" %} {% block title %} My Tickets {% endblock %} {%
-block content %}
+{% extends "layouts/base.html" %} 
+{% block title %} My Tickets {% endblock %} 
+{% block content %}
 
 <main class="content">
   <div class="container-fluid p-0">
@@ -19,21 +20,13 @@ block content %}
               </div>
               <div class="col-md-6 mt-3 mt-md-0">
                 <form method="get" action="" class="d-flex">
-                  <input
-                    type="text"
-                    name="q"
-                    class="form-control me-2"
-                    placeholder="Search by Ticket ID or Station..."
-                    value="{{ query }}"
-                  />
+                  <input type="text" name="q" class="form-control me-2" placeholder="Search by Ticket ID or Station..." value="{{ query }}" />
                   <button type="submit" class="btn btn-primary">Search</button>
+                  
                   {% if query %}
-                  <a
-                    href="{% url 'ticket_summary' %}"
-                    class="btn btn-outline-secondary ms-2"
-                    >Clear</a
-                  >
+                  <a href="{% url 'ticket_summary' %}" class="btn btn-outline-secondary ms-2">Clear</a>
                   {% endif %}
+                  
                 </form>
               </div>
             </div>
@@ -56,14 +49,10 @@ block content %}
                   {% for ticket in tickets %}
                   <tr>
                     <td>
-                      <span class="fw-bold text-primary"
-                        >#{{ ticket.ticket_id }}</span
-                      >
+                      <span class="fw-bold text-primary">#{{ ticket.ticket_id }}</span>
                     </td>
                     <td>
-                      <span class="fw-semibold"
-                        >{{ ticket.trip_date|date:"M d, Y" }}</span
-                      >
+                      <span class="fw-semibold">{{ ticket.trip_date|date:"M d, Y" }}</span>
                     </td>
                     <td class="text-muted small">
                       {{ ticket.purchase_date|date:"M d, Y H:i" }}
@@ -72,16 +61,10 @@ block content %}
                       <ul class="list-unstyled mb-0 small">
                         {% for trip in ticket.trips.all %}
                         <li class="mb-1">
-                          <i
-                            class="align-middle me-1"
-                            data-feather="map-pin"
-                            style="width: 14px; height: 14px"
-                          ></i>
+                          <i class="align-middle me-1" data-feather="map-pin" style="width: 14px; height: 14px"></i>
                           <strong>{{ trip.origin_name }}</strong> &rarr;
                           <strong>{{ trip.destination_name }}</strong>
-                          <span class="text-muted"
-                            >({{ trip.departure_time|time:"H:i" }})</span
-                          >
+                          <span class="text-muted">({{ trip.departure_time|time:"H:i" }})</span>
                         </li>
                         {% endfor %}
                       </ul>
@@ -93,22 +76,18 @@ block content %}
                       ${{ ticket.total_cost }}
                     </td>
                   </tr>
+                  
                   {% empty %}
+                  
                   <tr>
                     <td colspan="6" class="text-center py-5">
                       <div class="mb-3">
-                        <i
-                          class="align-middle text-muted"
-                          data-feather="inbox"
-                          style="width: 48px; height: 48px"
-                        ></i>
+                        <i class="align-middle text-muted" data-feather="inbox" style="width: 48px; height: 48px"></i>
                       </div>
                       <p class="text-muted">
                         You haven't purchased any tickets yet.
                       </p>
-                      <a href="{% url 'ticket_sales' %}" class="btn btn-primary"
-                        >Book a Trip</a
-                      >
+                      <a href="{% url 'ticket_sales' %}" class="btn btn-primary">Book a Trip</a>
                     </td>
                   </tr>
                   {% endfor %}

@@ -1,47 +1,81 @@
-<nav id="sidebar" class="sidebar">
+<nav id="sidebar" class="sidebar js-sidebar">
   <div class="sidebar-content js-simplebar">
-    <a class="sidebar-brand" href="index.html">
-      <span class="align-middle">TIRIAN TRAINS</span>
+    <a class="sidebar-brand" href="{% url 'home' %}">
+      <span
+        class="align-middle fw-bold text-primary"
+        style="letter-spacing: 1px"
+      >
+        <i class="align-middle me-2" data-feather="train"></i>TIRIAN TRAINS
+      </span>
     </a>
 
     <ul class="sidebar-nav">
-      <li class="sidebar-header">Overview</li>
+      <li class="sidebar-header">Navigation</li>
 
       <li class="sidebar-item {% if 'index' in segment %} active {% endif %}">
-        <a class="sidebar-link" href="/">
-          <i class="align-middle" data-feather="sliders"></i>
+        <a class="sidebar-link" href="{% url 'home' %}">
+          <i class="align-middle" data-feather="map"></i>
           <span class="align-middle">View Schedule</span>
         </a>
       </li>
 
-      <li class="sidebar-item {% if 'tickets' in segment %} active {% endif %}">
-        <a class="sidebar-link" href="pages-tickets.html">
-          <i class="align-middle" data-feather="tickets"></i>
+      <li class="sidebar-header">Booking</li>
+
+      <li
+        class="sidebar-item {% if 'pages-tickets' in segment %} active {% endif %}"
+      >
+        <a class="sidebar-link" href="{% url 'ticket_sales' %}">
+          <i class="align-middle" data-feather="tag"></i>
           <span class="align-middle">Purchase Ticket</span>
         </a>
       </li>
 
-      <li class="sidebar-item {% if 'summary' in segment %} active {% endif %}">
-        <a class="sidebar-link" href="pages-summary.html">
-          <i class="align-middle" data-feather="book"></i>
-          <span class="align-middle">View Summary</span>
+      {% if user.is_authenticated %}
+      <li
+        class="sidebar-item {% if 'pages-summary' in segment %} active {% endif %}"
+      >
+        <a class="sidebar-link" href="{% url 'ticket_summary' %}">
+          <i class="align-middle" data-feather="list"></i>
+          <span class="align-middle">My Tickets</span>
         </a>
       </li>
 
-      <li class="sidebar-item {% if 'profile' in segment %} active {% endif %}">
-        <a class="sidebar-link" href="pages-profile.html">
+      <li
+        class="sidebar-item {% if 'pages-profile' in segment %} active {% endif %}"
+      >
+        <a class="sidebar-link" href="{% url 'profile' %}">
           <i class="align-middle" data-feather="user"></i>
           <span class="align-middle">View Profile</span>
         </a>
       </li>
 
-      <li class="sidebar-header">Auth</li>
+      <li class="sidebar-header">Account</li>
       <li class="sidebar-item">
-        <a class="sidebar-link" href="{% url 'logout' %}">
+        <a class="sidebar-link text-danger" href="{% url 'logout' %}">
           <i class="align-middle" data-feather="log-out"></i>
           <span class="align-middle">Logout</span>
         </a>
       </li>
+
+      {% else %}
+      <li class="sidebar-header">Account</li>
+      <li
+        class="sidebar-item {% if 'pages-sign-in' in segment %} active {% endif %}"
+      >
+        <a class="sidebar-link" href="{% url 'login' %}">
+          <i class="align-middle" data-feather="log-in"></i>
+          <span class="align-middle">Log In</span>
+        </a>
+      </li>
+      <li
+        class="sidebar-item {% if 'pages-sign-up' in segment %} active {% endif %}"
+      >
+        <a class="sidebar-link" href="{% url 'register' %}">
+          <i class="align-middle" data-feather="user-plus"></i>
+          <span class="align-middle">Sign Up</span>
+        </a>
+      </li>
+      {% endif %}
     </ul>
   </div>
 </nav>
