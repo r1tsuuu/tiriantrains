@@ -1,5 +1,5 @@
 import datetime
-from django.db import models
+from django.db import models, transaction, IntegrityError
 from django.contrib.auth.models import User
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
@@ -232,6 +232,12 @@ class Trip(models.Model):
         help_text="Auto-calculated on save"
     )
 
+    # ADDED THIS FIELD FOR AUTOMATED ARCHIVING
+    is_archived = models.BooleanField(
+        default=False, 
+        help_text="True if trip has concluded"
+    )
+
     class Meta:
         ordering = ['departure_time']
 
@@ -282,7 +288,6 @@ class Trip(models.Model):
 
     def __str__(self):
         return f"Trip {self.trip_id} ({self.get_trip_type_display()})"  # type: ignore
-
 
 class L_Trip(models.Model):
     """
@@ -356,9 +361,19 @@ class Customer(models.Model):
             else:
                 new_seq = 0
                 
-            self.customer_id = f"{year_prefix}{new_seq:02d}"
-            
-        super(Customer, self).save(*args, **kwargs)
+            # Retry loop for concurrent sign-ups
+            while True:
+                self.customer_id = f"{year_prefix}{new_seq:02d}"
+                try:
+                    with transaction.atomic():
+                        super(Customer, self).save(*args, **kwargs)
+                    break # Break out of loop if save is successful
+                except IntegrityError:
+                    # ID collision occurred, increment and try again
+                    new_seq += 1
+        else:
+            # Standard save if ID already exists
+            super(Customer, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.last_name}, {self.given_name} ({self.customer_id})"
@@ -386,7 +401,10 @@ class Ticket(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.ticket_id:
-            today_str = datetime.date.today().strftime('%Y%m%d')
+            if not self.purchase_date:
+                self.purchase_date = datetime.date.today()
+
+            today_str = self.purchase_date.strftime('%Y%m%d')
             last_ticket = Ticket.objects.filter(ticket_id__startswith=today_str).order_by('ticket_id').last()
             
             if last_ticket:
@@ -398,12 +416,19 @@ class Ticket(models.Model):
             else:
                 new_seq = 1
             
-            self.ticket_id = f"{today_str}{new_seq:04d}"
-            
-            if not self.purchase_date:
-                self.purchase_date = datetime.date.today()
-
-        super(Ticket, self).save(*args, **kwargs)
+            # Retry loop for concurrent ticket purchases
+            while True:
+                self.ticket_id = f"{today_str}{new_seq:04d}"
+                try:
+                    with transaction.atomic():
+                        super(Ticket, self).save(*args, **kwargs)
+                    break # Break out of loop if save is successful
+                except IntegrityError:
+                    # ID collision occurred, increment and try again
+                    new_seq += 1
+        else:
+            # Standard save if ID already exists
+            super(Ticket, self).save(*args, **kwargs)
 
     def calculate_total_cost(self):
         """
@@ -477,7 +502,10 @@ class Maintenance_Log(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.log_id:
-            today_str = datetime.date.today().strftime('%Y%m%d')
+            if not self.date:
+                self.date = datetime.date.today()
+
+            today_str = self.date.strftime('%Y%m%d')
             last_log = Maintenance_Log.objects.filter(log_id__startswith=today_str).order_by('log_id').last()
             
             if last_log:
@@ -489,12 +517,19 @@ class Maintenance_Log(models.Model):
             else:
                 new_seq = 1
             
-            self.log_id = f"{today_str}{new_seq:04d}"
-            
-            if not self.date:
-                self.date = datetime.date.today()
-
-        super(Maintenance_Log, self).save(*args, **kwargs)
+            # Retry loop for concurrent maintenance log creation
+            while True:
+                self.log_id = f"{today_str}{new_seq:04d}"
+                try:
+                    with transaction.atomic():
+                        super(Maintenance_Log, self).save(*args, **kwargs)
+                    break # Break out of loop if save is successful
+                except IntegrityError:
+                    # ID collision occurred, increment and try again
+                    new_seq += 1
+        else:
+            # Standard save if ID already exists
+            super(Maintenance_Log, self).save(*args, **kwargs)
 
     def __str__(self):
         # Safely check if a train is assigned before accessing train_number

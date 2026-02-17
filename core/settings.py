@@ -1,8 +1,3 @@
-# -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
-
 import os
 from decouple import config
 from unipath import Path
@@ -12,22 +7,21 @@ BASE_DIR = Path(__file__).parent
 CORE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='S#perS3crEt_1122')
+# Now pulling securely from .env, with NO default fallback to prevent accidental exposure
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-# load production server from .env
-ALLOWED_HOSTS        = ['localhost', 'localhost:85', '127.0.0.1', config('SERVER', default='127.0.0.1')]
-CSRF_TRUSTED_ORIGINS = ['http://localhost:85', 'http://127.0.0.1', 'https://' + config('SERVER', default='127.0.0.1')]
+# Parse the comma-separated string from .env into a Python list
+ALLOWED_HOSTS = str(config('ALLOWED_HOSTS', default='127.0.0.1,localhost')).split(',')
+CSRF_TRUSTED_ORIGINS = ['http://localhost:85', 'http://127.0.0.1', 'https://' + str(config('SERVER', default='127.0.0.1'))]
 
 # Application definition
-
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [],
     "DEFAULT_PERMISSION_CLASSES": [],
 }
-
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -75,18 +69,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database
-# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-
+# Swapped from sqlite3 to postgresql
+# NOTE: Ensure you have created the 'postgres' role and the database in your local PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -104,16 +101,38 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
+
+# Celery Configuration Options
+# (Moved below Internationalization so TIME_ZONE is defined before being assigned to CELERY_TIMEZONE)
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat Schedule (Cron Jobs)
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'update-train-conditions-nightly': {
+        'task': 'apps.home.tasks.update_train_conditions',
+        'schedule': crontab(hour=0, minute=0),  # Runs exactly at midnight daily
+    },
+    'archive-past-trips-hourly': {
+        'task': 'apps.home.tasks.archive_past_trips',
+        'schedule': crontab(minute=0),  # Runs at the top of every hour
+    },
+}
+
+# Default primary key field type
+# Fixes (models.W042) warning for models like home.Log_Task
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 #############################################################
 # SRC: https://devcenter.heroku.com/articles/django-assets
@@ -127,7 +146,6 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     os.path.join(CORE_DIR, 'apps/static'),
 )
-
 
 #############################################################
 #############################################################
